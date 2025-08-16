@@ -1,0 +1,25 @@
+[package]
+name = "tui-torrent"
+version = "0.1.0"
+edition = "2024"
+default-run = "tui-torrent"
+
+[[bin]]
+name = "tui-torrent"
+path = "src/main.rs"
+
+[[bin]]
+name = "test_search"
+path = "src/bin/test_search.rs"
+
+[dependencies]
+ratatui = "0.26"
+crossterm = "0.27"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11", features = ["json", "cookies"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+scraper = "0.18"
+url = "2.4"
+regex = "1.10"
+urlencoding = "2.1"
