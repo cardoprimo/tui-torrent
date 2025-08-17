@@ -3,6 +3,7 @@ name = "tui-torrent"
 version = "0.1.0"
 edition = "2024"
 default-run = "tui-torrent"
+license = "MIT"
 
 [[bin]]
 name = "tui-torrent"
