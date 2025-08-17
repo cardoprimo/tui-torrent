@@ -4,6 +4,9 @@
 
 A Terminal User Interface (TUI) application for searching and downloading torrents using multiple sources.
 
+<img width="1490" height="795" alt="Screenshot 2025-08-17 at 20 31 52" src="https://github.com/user-attachments/assets/e1ff6774-a909-4682-afbc-c3dddb003bf2" />
+
+
 ## Features
 
 - 🔍 **Multi-source search**: Searches YTS, PirateBay, and 1337x simultaneously
@@ -36,11 +39,7 @@ cargo run
 - **Esc**: Go back/cancel current action
 - **q**: Quit application
 
-### Testing Search Integration
 
-```bash
-cargo run --bin test_search
-```
 
 ## Requirements
 
