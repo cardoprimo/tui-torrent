@@ -8,7 +8,7 @@
 ############################################################
 # OS / Editor noise
 ############################################################
-.DS_Store
+#.DS_Store
 Thumbs.db
 *.swp
 *.swo
@@ -16,7 +16,7 @@ Thumbs.db
 .#*
 
 # VS Code / IntelliJ / other IDE metadata
-.vscode/
+#.vscode/
 .idea/
 *.iml
 
