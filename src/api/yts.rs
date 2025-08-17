@@ -1,6 +1,6 @@
 use crate::torrent_search::TorrentSearchResult;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -24,14 +24,18 @@ struct YtsData {
 struct YtsMovie {
     title: String,
     year: u32,
+    #[allow(dead_code)]
     rating: f32,
+    #[allow(dead_code)]
     genres: Vec<String>,
+    #[allow(dead_code)]
     summary: String,
     torrents: Vec<YtsTorrent>,
 }
 
 #[derive(Debug, Deserialize)]
 struct YtsTorrent {
+    #[allow(dead_code)]
     url: String,
     hash: String,
     quality: String,
@@ -40,6 +44,7 @@ struct YtsTorrent {
     seeds: u32,
     peers: u32,
     size: String,
+    #[allow(dead_code)]
     #[serde(rename = "date_uploaded")]
     date_uploaded: String,
 }

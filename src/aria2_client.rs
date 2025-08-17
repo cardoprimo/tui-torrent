@@ -5,10 +5,14 @@ use serde_json::json;
 pub struct TorrentStatus {
     pub gid: String,
     pub status: String,
-    pub totalLength: String,
-    pub completedLength: String,
-    pub downloadSpeed: String,
-    pub infoHash: Option<String>,
+    #[serde(rename = "totalLength")]
+    pub total_length: String,
+    #[serde(rename = "completedLength")]
+    pub completed_length: String,
+    #[serde(rename = "downloadSpeed")]
+    pub download_speed: String,
+    #[serde(rename = "infoHash")]
+    pub info_hash: Option<String>,
 }
 
 pub async fn get_active_downloads() -> Result<Vec<TorrentStatus>, reqwest::Error> {

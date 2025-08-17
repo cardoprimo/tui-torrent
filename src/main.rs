@@ -10,7 +10,7 @@ pub mod utils;
 
 use app::{App, AppMode};
 use aria2_manager::Aria2Manager;
-use ascii_art::TUI_BIRD_TITLE;
+use ascii_art::TUI_LOGO;
 use torrent_search::TorrentSearchEngine;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
@@ -22,11 +22,9 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Show ASCII art title
-    println!("{}", TUI_BIRD_TITLE);
+    println!("{}", TUI_LOGO);
     println!("🏴‍☠️ Starting TUI Torrent...");
     
-    // Initialize and start aria2 manager
     let mut aria2_manager = Aria2Manager::new();
     
     let aria2_available = match aria2_manager.ensure_aria2_running().await {
@@ -91,7 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut last_update = Instant::now();
 
     loop {
-        // Handle input
+
         app.handle_input()?;
         
         if app.should_quit {

@@ -1,8 +1,7 @@
 use crate::torrent_search::TorrentSearchResult;
 use reqwest::Client;
 use scraper::{Html, Selector};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+// No additional imports needed
 
 
 #[derive(Debug, Clone)]
@@ -11,15 +10,7 @@ pub struct X1337Client {
     base_url: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct TorrentInfo {
-    name: String,
-    size: String,
-    seeders: u32,
-    leechers: u32,
-    magnet_link: String,
-    info_hash: String,
-}
+// (Removed unused TorrentInfo struct)
 
 impl X1337Client {
     pub fn new() -> Self {
@@ -174,20 +165,6 @@ impl X1337Client {
         }
 
         Err("Magnet link not found".into())
-    }
-
-    pub fn get_categories() -> HashMap<&'static str, &'static str> {
-        let mut categories = HashMap::new();
-        categories.insert("Movies", "Movies");
-        categories.insert("TV", "TV");
-        categories.insert("Games", "Games");
-        categories.insert("Music", "Music");
-        categories.insert("Apps", "Applications");
-        categories.insert("Anime", "Anime");
-        categories.insert("Documentaries", "Documentaries");
-        categories.insert("XXX", "XXX");
-        categories.insert("Other", "Other");
-        categories
     }
 }
 

@@ -1,12 +1,11 @@
 use crate::torrent_search::TorrentSearchResult;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct PirateBayClient {
     client: Client,
-    mirrors: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -15,12 +14,18 @@ struct PbSearchResult {
     info_hash: String,
     leechers: String,
     seeders: String,
+    #[allow(dead_code)]
     num_files: String,
     size: String,
+    #[allow(dead_code)]
     username: String,
+    #[allow(dead_code)]
     added: String,
+    #[allow(dead_code)]
     status: String,
+    #[allow(dead_code)]
     category: String,
+    #[allow(dead_code)]
     imdb: String,
 }
 
@@ -32,15 +37,7 @@ impl PirateBayClient {
             .build()
             .expect("Failed to create HTTP client");
 
-        let mirrors = vec![
-            "https://apibay.org".to_string(),
-            "https://thepiratebay.org".to_string(),
-        ];
-
-        Self {
-            client,
-            mirrors,
-        }
+    Self { client }
     }
 
     pub async fn search(&self, query: &str, _category: Option<&str>) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {

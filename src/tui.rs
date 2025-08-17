@@ -105,7 +105,7 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
                         .iter()
                         .enumerate()
                         .map(|(i, t)| {
-                            let progress = if let (Ok(completed), Ok(total)) = (t.completedLength.parse::<u64>(), t.totalLength.parse::<u64>()) {
+                            let progress = if let (Ok(completed), Ok(total)) = (t.completed_length.parse::<u64>(), t.total_length.parse::<u64>()) {
                                 if total > 0 {
                                     format!(" ({:.1}%)", (completed as f64 / total as f64) * 100.0)
                                 } else {
@@ -117,7 +117,7 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
 
                             let title = format!(
                                 "📁 {} - {}/{} bytes{} @ {} B/s",
-                                t.status, t.completedLength, t.totalLength, progress, t.downloadSpeed
+                                t.status, t.completed_length, t.total_length, progress, t.download_speed
                             );
                             let style = if i == app.selected_index && app.mode == AppMode::Normal {
                                 Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)

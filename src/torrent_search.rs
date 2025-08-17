@@ -64,10 +64,6 @@ impl TorrentSearchEngine {
     async fn search_1337x(&self, query: &str, category: Option<&str>) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
         self.x1337_client.search(query, category).await
     }
-
-    pub fn get_available_categories() -> std::collections::HashMap<&'static str, &'static str> {
-        X1337Client::get_categories()
-    }
 }
 
 impl Default for TorrentSearchEngine {

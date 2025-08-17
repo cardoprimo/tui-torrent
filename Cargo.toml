@@ -8,10 +8,6 @@ default-run = "tui-torrent"
 name = "tui-torrent"
 path = "src/main.rs"
 
-[[bin]]
-name = "test_search"
-path = "src/bin/test_search.rs"
-
 [dependencies]
 ratatui = "0.26"
 crossterm = "0.27"
