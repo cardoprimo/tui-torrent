@@ -12,6 +12,7 @@ pub struct TorrentSearchResult {
     pub source: String,
 }
 
+#[derive(Clone)]
 pub struct TorrentSearchEngine {
     x1337_client: X1337Client,
     yts_client: YtsClient,

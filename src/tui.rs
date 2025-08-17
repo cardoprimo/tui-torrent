@@ -1,21 +1,19 @@
 use crate::app::{App, AppMode};
 use ratatui::{
     Terminal,
-    backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Alignment},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Clear},
 };
-use std::io::{Result, stdout};
+use std::io::Result;
 
-pub fn render_ui(app: &App) -> Result<()> {
-    let stdout = stdout();
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
-
-    // Clear the terminal before drawing to prevent overlapping text
+// Draw the UI using an existing terminal instance (prevents flicker & overlap)
+pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: &App) -> Result<()> {
     terminal.draw(|f| {
+        // Clear whole frame first so shorter new content does not leave remnants
+        let size = f.size();
+        f.render_widget(Clear, size);
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
@@ -53,7 +51,7 @@ pub fn render_ui(app: &App) -> Result<()> {
                 let loading_indicator = app.get_loading_indicator();
                 let title = format!("{} Searching Multiple Sources...", loading_indicator);
                 let search_bar = Paragraph::new(searching_text)
-                    .style(Style::default().fg(Color::Blue))
+                    .style(Style::default().fg(Color::LightYellow))
                     .block(Block::default().title(title).borders(Borders::ALL));
                 f.render_widget(search_bar, chunks[0]);
             },
@@ -93,7 +91,7 @@ pub fn render_ui(app: &App) -> Result<()> {
             .block(Block::default().borders(Borders::ALL));
         f.render_widget(status_bar, chunks[2]);
 
-        // Render main content based on app mode
+    // Render main content based on app mode
         match app.mode {
             AppMode::Normal | AppMode::Search => {
                 if app.active_downloads.is_empty() {
@@ -204,6 +202,5 @@ pub fn render_ui(app: &App) -> Result<()> {
             }
         }
     })?;
-
     Ok(())
 }

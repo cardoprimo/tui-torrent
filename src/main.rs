@@ -18,6 +18,7 @@ use crossterm::{
 };
 use std::io;
 use tokio::time::{Duration, Instant};
+use ratatui::{backend::CrosstermBackend, Terminal};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -56,12 +57,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Setup terminal
     terminal::enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    crossterm::execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
+
+    // Create terminal once and reuse
+    let backend = CrosstermBackend::new(io::stdout());
+    let mut terminal = Terminal::new(backend)?;
+    terminal.clear()?;
 
     // Create app state
     let mut app = App::new();
     let search_engine = TorrentSearchEngine::new();
+
+    // Track if we've already rendered the initial searching frame
+    let mut initial_search_frame_rendered = false;
     
     // Update status based on aria2 availability
     if aria2_available {
@@ -90,19 +98,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
 
-        // Handle search state
+        // Perform search (blocking) but ensure searching frame displayed first
         if app.mode == AppMode::Searching && app.search_in_progress {
-            let query = app.search_query.clone();
-            let category = app.selected_category.clone();
-            
-            match search_engine.search_torrents(&query, category.as_deref()).await {
-                Ok(results) => {
-                    app.finish_search(results);
+            if !initial_search_frame_rendered {
+                // Immediate render to show user the searching state before network calls
+                tui::render_ui(&mut terminal, &app)?;
+                initial_search_frame_rendered = true;
+            } else {
+                // Execute the search now
+                let query = app.search_query.clone();
+                let category = app.selected_category.clone();
+                match search_engine.search_torrents(&query, category.as_deref()).await {
+                    Ok(results) => app.finish_search(results),
+                    Err(e) => app.search_error(e.to_string()),
                 }
-                Err(e) => {
-                    app.search_error(e.to_string());
-                }
+                initial_search_frame_rendered = false; // reset for next time
             }
+        } else {
+            initial_search_frame_rendered = false; // reset if we leave searching mode
         }
         
         // Handle torrent download request
@@ -131,14 +144,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let current_tick_rate = if app.search_in_progress { loading_tick_rate } else { tick_rate };
         if last_tick.elapsed() >= current_tick_rate {
             app.update_loading_animation();
-            tui::render_ui(&app)?;
+            tui::render_ui(&mut terminal, &app)?;
             last_tick = Instant::now();
         }
     }
 
     // Restore terminal
     terminal::disable_raw_mode()?;
-    crossterm::execute!(stdout, LeaveAlternateScreen, DisableMouseCapture)?;
+    crossterm::execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
 
     // Clean up aria2 process
     aria2_manager.stop();
