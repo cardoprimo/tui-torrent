@@ -14,6 +14,7 @@ pub fn render_ui(app: &App) -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
+    // Clear the terminal before drawing to prevent overlapping text
     terminal.draw(|f| {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -49,9 +50,11 @@ pub fn render_ui(app: &App) -> Result<()> {
             },
             AppMode::Searching => {
                 let searching_text = format!("Searching for: {}", app.search_query);
+                let loading_indicator = app.get_loading_indicator();
+                let title = format!("{} Searching Multiple Sources...", loading_indicator);
                 let search_bar = Paragraph::new(searching_text)
                     .style(Style::default().fg(Color::Blue))
-                    .block(Block::default().title("🔄 Searching Multiple Sources...").borders(Borders::ALL));
+                    .block(Block::default().title(title).borders(Borders::ALL));
                 f.render_widget(search_bar, chunks[0]);
             },
             AppMode::Results => {
@@ -78,7 +81,13 @@ pub fn render_ui(app: &App) -> Result<()> {
             Color::Green
         };
 
-        let status_bar = Paragraph::new(app.status_message.clone())
+        let status_text = if app.search_in_progress {
+            format!("{} {}", app.get_loading_indicator(), app.search_progress)
+        } else {
+            app.status_message.clone()
+        };
+
+        let status_bar = Paragraph::new(status_text)
             .style(Style::default().fg(status_color))
             .alignment(Alignment::Center)
             .block(Block::default().borders(Borders::ALL));
@@ -130,12 +139,15 @@ pub fn render_ui(app: &App) -> Result<()> {
                 }
             },
             AppMode::Searching => {
-                // Show loading animation
-                let loading_msg = Paragraph::new("🔄 Searching YTS, PirateBay, and 1337x...\n\nThis may take a few seconds...")
+                // Show loading animation with spinner and progress
+                let loading_indicator = app.get_loading_indicator();
+                let loading_msg = format!("{} Searching Multiple Sources\n\n{} {}\n\n{} Please wait while we fetch results...", 
+                    loading_indicator, loading_indicator, app.search_progress, loading_indicator);
+                let loading_widget = Paragraph::new(loading_msg)
                     .style(Style::default().fg(Color::Blue))
                     .alignment(Alignment::Center)
-                    .block(Block::default().title("🔍 Searching").borders(Borders::ALL));
-                f.render_widget(loading_msg, chunks[1]);
+                    .block(Block::default().title(format!("{} Searching", loading_indicator)).borders(Borders::ALL));
+                f.render_widget(loading_widget, chunks[1]);
             },
             AppMode::Results => {
                 if app.search_results.is_empty() {

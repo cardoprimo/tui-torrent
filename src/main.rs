@@ -2,6 +2,7 @@ pub mod api;
 pub mod aria2_client;
 pub mod aria2_manager;
 pub mod app;
+pub mod ascii_art;
 pub mod error;
 pub mod torrent_search;
 pub mod tui;
@@ -9,6 +10,7 @@ pub mod utils;
 
 use app::{App, AppMode};
 use aria2_manager::Aria2Manager;
+use ascii_art::TUI_BIRD_TITLE;
 use torrent_search::TorrentSearchEngine;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
@@ -19,6 +21,8 @@ use tokio::time::{Duration, Instant};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Show ASCII art title
+    println!("{}", TUI_BIRD_TITLE);
     println!("🏴‍☠️ Starting TUI Torrent...");
     
     // Initialize and start aria2 manager
@@ -74,6 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Main loop
     let tick_rate = Duration::from_millis(100);
+    let loading_tick_rate = Duration::from_millis(150); // Faster animation during search
     let mut last_tick = Instant::now();
     let mut last_update = Instant::now();
 
@@ -122,8 +127,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             last_update = Instant::now();
         }
 
-        // Render UI
-        if last_tick.elapsed() >= tick_rate {
+        // Update loading animation and render UI
+        let current_tick_rate = if app.search_in_progress { loading_tick_rate } else { tick_rate };
+        if last_tick.elapsed() >= current_tick_rate {
+            app.update_loading_animation();
             tui::render_ui(&app)?;
             last_tick = Instant::now();
         }

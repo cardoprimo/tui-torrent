@@ -23,6 +23,8 @@ pub struct App {
     pub status_message: String,
     pub selected_category: Option<String>,
     pub download_requested: bool,
+    pub loading_frame: usize,
+    pub search_progress: String,
 }
 
 impl App {
@@ -38,15 +40,19 @@ impl App {
             status_message: "Starting up...".to_string(),
             selected_category: None,
             download_requested: false,
+            loading_frame: 0,
+            search_progress: String::new(),
         }
     }
 
     pub fn start_search(&mut self) {
         self.mode = AppMode::Searching;
         self.search_in_progress = true;
-        self.status_message = "Searching torrents...".to_string();
+        self.status_message = "Initializing search across multiple sources...".to_string();
+        self.search_progress = "Starting search...".to_string();
         self.search_results.clear();
         self.selected_index = 0;
+        self.loading_frame = 0;
     }
 
     pub fn finish_search(&mut self, results: Vec<TorrentSearchResult>) {
@@ -61,6 +67,34 @@ impl App {
         self.search_in_progress = false;
         self.mode = AppMode::Normal;
         self.status_message = format!("Search failed: {}", error);
+    }
+
+    pub fn update_loading_animation(&mut self) {
+        if self.search_in_progress {
+            self.loading_frame = (self.loading_frame + 1) % 8;
+            
+            // Update search progress message with different states
+            let progress_messages = [
+                "Connecting to YTS movie database...",
+                "Searching YTS for movies...",
+                "Connecting to PirateBay API...",
+                "Searching PirateBay torrents...",
+                "Checking 1337x mirrors...",
+                "Searching 1337x database...",
+                "Sorting results by seeders...",
+                "Finalizing search results...",
+            ];
+            
+            let message_index = (self.loading_frame / 4) % progress_messages.len();
+            self.search_progress = progress_messages[message_index].to_string();
+        }
+    }
+
+    pub fn get_loading_indicator(&self) -> &'static str {
+        const LOADING_FRAMES: &[&str] = &[
+            "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"
+        ];
+        LOADING_FRAMES[self.loading_frame]
     }
 
     pub fn handle_input(&mut self) -> io::Result<()> {
