@@ -32,6 +32,8 @@ pub fn render_ui(app: &App) -> Result<()> {
                     Span::raw("Press "),
                     Span::styled("s", Style::default().add_modifier(Modifier::BOLD).fg(Color::Green)),
                     Span::raw(" to search, "),
+                    Span::styled("↑↓/jk", Style::default().add_modifier(Modifier::BOLD).fg(Color::Yellow)),
+                    Span::raw(" to navigate, "),
                     Span::styled("q", Style::default().add_modifier(Modifier::BOLD).fg(Color::Red)),
                     Span::raw(" to quit"),
                 ]))
@@ -59,7 +61,7 @@ pub fn render_ui(app: &App) -> Result<()> {
                     Span::raw(" to download, "),
                     Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD).fg(Color::Red)),
                     Span::raw(" to go back, "),
-                    Span::styled("↑↓", Style::default().add_modifier(Modifier::BOLD).fg(Color::Yellow)),
+                    Span::styled("↑↓/jk", Style::default().add_modifier(Modifier::BOLD).fg(Color::Yellow)),
                     Span::raw(" to navigate"),
                 ]))
                 .block(Block::default().title(format!("📋 Search Results ({})", app.search_results.len())).borders(Borders::ALL));

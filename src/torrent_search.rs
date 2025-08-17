@@ -40,7 +40,7 @@ impl TorrentSearchEngine {
             all_results.append(&mut results);
         }
 
-        // Search 1337x (fallback to mock data)
+        // Search 1337x
         if let Ok(Ok(mut results)) = timeout(Duration::from_secs(15), self.search_1337x(query, category)).await {
             all_results.append(&mut results);
         }

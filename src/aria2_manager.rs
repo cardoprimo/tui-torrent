@@ -1,3 +1,4 @@
+use crate::utils::{get_default_download_dir, ensure_download_dir_exists};
 use std::process::{Command, Child, Stdio};
 use std::io;
 use tokio::time::{sleep, Duration};
@@ -49,7 +50,6 @@ impl Aria2Manager {
     /// Start aria2c process if not already running
     pub async fn ensure_aria2_running(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if self.is_aria2_running().await {
-            println!("✅ aria2c RPC server is already running");
             return Ok(());
         }
 
@@ -58,9 +58,13 @@ impl Aria2Manager {
             return Err("aria2c not found. Please install aria2: brew install aria2 (macOS) or apt install aria2 (Ubuntu)".into());
         }
 
-        println!("🚀 Starting aria2c RPC server...");
+        // Get and ensure download directory exists
+        let download_dir = get_default_download_dir();
+        ensure_download_dir_exists(&download_dir)?;
         
-        // Try to start aria2c
+        let download_dir_str = download_dir.to_string_lossy();
+        
+        // Try to start aria2c with download directory
         let child = Command::new("aria2c")
             .args(&[
                 "--enable-rpc",
@@ -73,6 +77,9 @@ impl Aria2Manager {
                 "--split=16",
                 "--min-split-size=1M",
                 "--daemon=false", // Don't daemonize so we can manage the process
+                "--dir", &download_dir_str, // Set download directory
+                "--auto-file-renaming=true", // Avoid filename conflicts
+                "--allow-overwrite=false", // Don't overwrite existing files
             ])
             .stdout(Stdio::null()) // Suppress aria2c output
             .stderr(Stdio::null())
@@ -85,7 +92,6 @@ impl Aria2Manager {
                 
                 // Check if it's actually running
                 if self.is_aria2_running().await {
-                    println!("✅ aria2c RPC server started successfully");
                     self.process = Some(process);
                     Ok(())
                 } else {
@@ -102,6 +108,11 @@ impl Aria2Manager {
                 }
             }
         }
+    }
+
+    /// Get the download directory being used
+    pub fn get_download_dir(&self) -> String {
+        get_default_download_dir().to_string_lossy().to_string()
     }
 
     /// Get aria2 version info
@@ -132,7 +143,6 @@ impl Aria2Manager {
     /// Stop the managed aria2c process
     pub fn stop(&mut self) {
         if let Some(mut process) = self.process.take() {
-            println!("🛑 Stopping aria2c process...");
             let _ = process.kill();
             let _ = process.wait();
         }

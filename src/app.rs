@@ -81,12 +81,12 @@ impl App {
         match key.code {
             KeyCode::Char('q') => self.should_quit = true,
             KeyCode::Char('s') => self.mode = AppMode::Search,
-            KeyCode::Down => {
+            KeyCode::Down | KeyCode::Char('j') => {
                 if !self.active_downloads.is_empty() {
                     self.selected_index = (self.selected_index + 1) % self.active_downloads.len();
                 }
             }
-            KeyCode::Up => {
+            KeyCode::Up | KeyCode::Char('k') => {
                 if !self.active_downloads.is_empty() {
                     self.selected_index = if self.selected_index == 0 {
                         self.active_downloads.len() - 1
@@ -132,12 +132,12 @@ impl App {
                     self.download_requested = true;
                 }
             }
-            KeyCode::Down => {
+            KeyCode::Down | KeyCode::Char('j') => {
                 if !self.search_results.is_empty() {
                     self.selected_index = (self.selected_index + 1) % self.search_results.len();
                 }
             }
-            KeyCode::Up => {
+            KeyCode::Up | KeyCode::Char('k') => {
                 if !self.search_results.is_empty() {
                     self.selected_index = if self.selected_index == 0 {
                         self.search_results.len() - 1

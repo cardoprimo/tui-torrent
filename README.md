@@ -30,7 +30,7 @@ cargo run
 - **Enter**:
   - In search mode: Execute search
   - In results mode: Download selected torrent
-- **↑/↓**: Navigate through results or downloads
+- **↑/↓** or **j/k**: Navigate through results or downloads (vim-style)
 - **Esc**: Go back/cancel current action
 - **q**: Quit application
 

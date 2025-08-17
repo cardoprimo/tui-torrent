@@ -62,16 +62,15 @@ impl X1337Client {
         for mirror in mirrors {
             match self.try_search_with_mirror(mirror, query, category).await {
                 Ok(results) => return Ok(results),
-                Err(e) => {
-                    println!("Failed with mirror {}: {}", mirror, e);
+                Err(_) => {
+                    // Silently try next mirror
                     continue;
                 }
             }
         }
 
-        // If all mirrors fail, return mock data for testing
-        println!("All mirrors failed, returning mock data for testing");
-        Ok(self.get_mock_results(query))
+        // If all mirrors fail, return empty results
+        Ok(Vec::new())
     }
 
     async fn try_search_with_mirror(&self, mirror: &str, query: &str, category: Option<&str>) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
@@ -83,7 +82,7 @@ impl X1337Client {
             None => format!("{}/search/{}/1/", mirror, query),
         };
 
-        println!("Trying URL: {}", search_url);
+        // Trying to search mirror silently
 
         let response = self.client
             .get(&search_url)
@@ -105,34 +104,7 @@ impl X1337Client {
         self.parse_search_results(&html).await
     }
 
-    fn get_mock_results(&self, query: &str) -> Vec<TorrentSearchResult> {
-        vec![
-            TorrentSearchResult {
-                name: format!("{} Ubuntu 22.04.3 Desktop amd64", query),
-                size: "4.7 GB".to_string(),
-                seeders: 1250,
-                leechers: 45,
-                magnet_link: "magnet:?xt=urn:btih:example1&dn=ubuntu-22.04.3-desktop-amd64.iso".to_string(),
-                source: "1337x (mock)".to_string(),
-            },
-            TorrentSearchResult {
-                name: format!("{} Ubuntu 20.04.6 LTS Desktop amd64", query),
-                size: "3.8 GB".to_string(),
-                seeders: 890,
-                leechers: 32,
-                magnet_link: "magnet:?xt=urn:btih:example2&dn=ubuntu-20.04.6-desktop-amd64.iso".to_string(),
-                source: "1337x (mock)".to_string(),
-            },
-            TorrentSearchResult {
-                name: format!("{} Ubuntu Server 22.04.3 LTS amd64", query),
-                size: "1.4 GB".to_string(),
-                seeders: 567,
-                leechers: 18,
-                magnet_link: "magnet:?xt=urn:btih:example3&dn=ubuntu-22.04.3-live-server-amd64.iso".to_string(),
-                source: "1337x (mock)".to_string(),
-            },
-        ]
-    }
+
 
     async fn parse_search_results(&self, html: &str) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
         let document = Html::parse_document(html);

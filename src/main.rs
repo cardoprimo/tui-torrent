@@ -5,6 +5,7 @@ pub mod app;
 pub mod error;
 pub mod torrent_search;
 pub mod tui;
+pub mod utils;
 
 use app::{App, AppMode};
 use aria2_manager::Aria2Manager;
@@ -23,22 +24,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize and start aria2 manager
     let mut aria2_manager = Aria2Manager::new();
     
-    match aria2_manager.ensure_aria2_running().await {
+    let aria2_available = match aria2_manager.ensure_aria2_running().await {
         Ok(()) => {
             if let Ok(version) = aria2_manager.get_version().await {
                 println!("📡 Connected to aria2 version: {}", version);
+            } else {
+                println!("📡 Connected to aria2");
             }
+            println!("📁 Downloads will be saved to: {}", aria2_manager.get_download_dir());
+            true
         }
         Err(e) => {
             eprintln!("⚠️  Warning: {}", e);
             eprintln!("💡 Downloads will not work without aria2. Install it with:");
             eprintln!("   macOS: brew install aria2");
             eprintln!("   Ubuntu: sudo apt install aria2");
-            eprintln!("   Or download from: https://aria2.github.io/");
             eprintln!();
             eprintln!("🔄 Continuing anyway... (search will still work)");
+            false
         }
-    }
+    };
+
+    println!("🚀 Starting TUI interface...");
+    
+    // Small delay to let user see the startup messages
+    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
     // Setup terminal
     terminal::enable_raw_mode()?;
@@ -50,10 +60,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let search_engine = TorrentSearchEngine::new();
     
     // Update status based on aria2 availability
-    if aria2_manager.is_aria2_running().await {
-        app.status_message = "Ready - aria2 RPC connected".to_string();
+    if aria2_available {
+        let download_dir = aria2_manager.get_download_dir();
+        let short_path = if download_dir.len() > 40 {
+            format!("...{}", &download_dir[download_dir.len()-37..])
+        } else {
+            download_dir
+        };
+        app.status_message = format!("Ready - Downloads: {} - Press 's' to search", short_path);
     } else {
-        app.status_message = "Ready - aria2 not available (downloads disabled)".to_string();
+        app.status_message = "Ready - Search only (aria2 not available)".to_string();
     }
     
     // Main loop
@@ -119,7 +135,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Clean up aria2 process
     aria2_manager.stop();
-    println!("👋 Goodbye!");
 
     Ok(())
 }
