@@ -115,9 +115,16 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
                                 String::new()
                             };
 
+                            // Use file name if available, otherwise fall back to GID
+                            let display_name = if let Some(ref file_name) = t.file_name {
+                                file_name.clone()
+                            } else {
+                                format!("Download {}", t.gid.chars().take(8).collect::<String>())
+                            };
+
                             let title = format!(
                                 "📁 {} - {}/{} bytes{} @ {} B/s",
-                                t.status, t.completed_length, t.total_length, progress, t.download_speed
+                                display_name, t.completed_length, t.total_length, progress, t.download_speed
                             );
                             let style = if i == app.selected_index && app.mode == AppMode::Normal {
                                 Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
