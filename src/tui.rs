@@ -1,5 +1,4 @@
 use crate::app::{App, AppMode};
-use crate::utils::{format_bytes, format_speed};
 use ratatui::{
     Terminal,
     layout::{Constraint, Direction, Layout, Alignment},
@@ -106,18 +105,14 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
                         .iter()
                         .enumerate()
                         .map(|(i, t)| {
-                            let (formatted_completed, formatted_total, progress) = if let (Ok(completed), Ok(total)) = (t.completed_length.parse::<u64>(), t.total_length.parse::<u64>()) {
-                                let formatted_completed = format_bytes(completed);
-                                let formatted_total = format_bytes(total);
-                                let progress = if total > 0 {
+                            let progress = if let (Ok(completed), Ok(total)) = (t.completed_length.parse::<u64>(), t.total_length.parse::<u64>()) {
+                                if total > 0 {
                                     format!(" ({:.1}%)", (completed as f64 / total as f64) * 100.0)
                                 } else {
                                     String::new()
                                 }
-                                                                (formatted_completed, formatted_total, progress)
-
                             } else {
-                                (t.completed_length.clone(), t.total_length.clone(), String::new())
+                                String::new()
                             };
 
                             // Use file name if available, otherwise fall back to GID
@@ -128,16 +123,9 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
                             };
 
                             let title = format!(
-                                "📁 {} - {}/{} {}",
-                                display_name, formatted_completed, formatted_total, progress
+                                "📁 {} - {}/{} bytes{} @ {} B/s",
+                                display_name, t.completed_length, t.total_length, progress, t.download_speed
                             );
-
-                            // Add speed info if available
-                            let title = if t.download_speed != "0" && !t.download_speed.is_empty() {
-                                format!("{} @ {}", title, format_speed(&t.download_speed))
-                            } else {
-                                title
-                            };
                             let style = if i == app.selected_index && app.mode == AppMode::Normal {
                                 Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
                             } else {
