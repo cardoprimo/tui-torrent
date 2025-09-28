@@ -37,7 +37,7 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
                     Span::styled("q", Style::default().add_modifier(Modifier::BOLD).fg(Color::Red)),
                     Span::raw(" to quit"),
                 ]))
-                .block(Block::default().title("🏴‍☠️ TUI Torrent").borders(Borders::ALL));
+                .block(Block::default().title("🏴‍☠️  TUI Torrent").borders(Borders::ALL));
                 f.render_widget(instructions, chunks[0]);
             },
             AppMode::Search => {
@@ -68,6 +68,19 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
                 ]))
                 .block(Block::default().title(format!("📋 Search Results ({})", app.search_results.len())).borders(Borders::ALL));
                 f.render_widget(result_info, chunks[0]);
+            },
+            AppMode::Recents => {
+                let recents_info = Paragraph::new(Line::from(vec![
+                    Span::raw("Press "),
+                    Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD).fg(Color::Green)),
+                    Span::raw(" to select, "),
+                    Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD).fg(Color::Red)),
+                    Span::raw(" to cancel, "),
+                    Span::styled("↑↓/jk", Style::default().add_modifier(Modifier::BOLD).fg(Color::Yellow)),
+                    Span::raw(" to navigate"),
+                ]))
+                .block(Block::default().title("📜 Recent Searches").borders(Borders::ALL));
+                f.render_widget(recents_info, chunks[0]);
             }
         }
 
@@ -216,6 +229,38 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
                             .borders(Borders::ALL),
                     );
                     f.render_widget(results_list, chunks[1]);
+                }
+            },
+            AppMode::Recents => {
+                if app.filtered_recents.is_empty() {
+                    let empty_msg = Paragraph::new("No recent searches found.")
+                        .style(Style::default().fg(Color::Gray))
+                        .alignment(Alignment::Center)
+                        .block(Block::default().title("📜 Recent Searches").borders(Borders::ALL));
+                    f.render_widget(empty_msg, chunks[1]);
+                } else {
+                    let visible_items: Vec<ListItem> = app.filtered_recents
+                        .iter()
+                        .skip(app.recents_offset)
+                        .take(5)
+                        .enumerate()
+                        .map(|(i, term)| {
+                            let global_index = app.recents_offset + i;
+                            let style = if global_index == app.recents_index {
+                                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                            } else {
+                                Style::default()
+                            };
+                            ListItem::new(term.clone()).style(style)
+                        })
+                        .collect();
+
+                    let recents_list = List::new(visible_items).block(
+                        Block::default()
+                            .title(format!("📜 Recent Searches ({}/{})", app.recents_index + 1, app.filtered_recents.len()))
+                            .borders(Borders::ALL),
+                    );
+                    f.render_widget(recents_list, chunks[1]);
                 }
             }
         }

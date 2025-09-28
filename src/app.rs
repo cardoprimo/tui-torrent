@@ -1,6 +1,6 @@
 use crate::aria2_client::TorrentStatus;
 use crate::torrent_search::TorrentSearchResult;
-use crossterm::event::{self, Event, KeyCode, KeyEvent};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use std::io;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -9,6 +9,7 @@ pub enum AppMode {
     Search,
     Results,
     Searching,
+    Recents,
 }
 
 #[derive(Debug)]
@@ -18,6 +19,10 @@ pub struct App {
     pub search_results: Vec<TorrentSearchResult>,
     pub active_downloads: Vec<TorrentStatus>,
     pub selected_index: usize,
+    pub search_history: Vec<String>,
+    pub recents_index: usize,
+    pub recents_offset: usize,
+    pub filtered_recents: Vec<String>,
     pub should_quit: bool,
     pub search_in_progress: bool,
     pub status_message: String,
@@ -35,6 +40,10 @@ impl App {
             search_results: Vec::new(),
             active_downloads: Vec::new(),
             selected_index: 0,
+            search_history: Vec::new(),
+            recents_index: 0,
+            recents_offset: 0,
+            filtered_recents: Vec::new(),
             should_quit: false,
             search_in_progress: false,
             status_message: "Starting up...".to_string(),
@@ -61,6 +70,10 @@ impl App {
         self.mode = AppMode::Results;
         self.status_message = format!("Found {} results", self.search_results.len());
         self.selected_index = 0;
+        // Add the search term to history
+        if !self.search_query.is_empty() {
+            self.add_to_search_history(self.search_query.clone());
+        }
     }
 
     pub fn search_error(&mut self, error: String) {
@@ -105,6 +118,7 @@ impl App {
                     AppMode::Search => self.handle_search_mode(key),
                     AppMode::Results => self.handle_results_mode(key),
                     AppMode::Searching => self.handle_searching_mode(key),
+                    AppMode::Recents => self.handle_recents_mode(key),
                 }
             }
         }
@@ -115,6 +129,9 @@ impl App {
         match key.code {
             KeyCode::Char('q') => self.should_quit = true,
             KeyCode::Char('s') => self.mode = AppMode::Search,
+            KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.enter_recents_mode();
+            },
             KeyCode::Down | KeyCode::Char('j') => {
                 if !self.active_downloads.is_empty() {
                     self.selected_index = (self.selected_index + 1) % self.active_downloads.len();
@@ -194,6 +211,80 @@ impl App {
             _ => {
                 // Ignore other keys while searching
             }
+        }
+    }
+
+    pub fn add_to_search_history(&mut self, term: String) {
+        if !self.search_history.contains(&term) {
+            self.search_history.push(term);
+        }
+    }
+
+    pub fn filter_recents(&mut self) {
+        if self.search_query.is_empty() {
+            self.filtered_recents = self.search_history.clone();
+        } else {
+            self.filtered_recents = self.search_history
+                .iter()
+                .filter(|term| term.contains(&self.search_query))
+                .cloned()
+                .collect();
+        }
+        // Reset index and offset if out of bounds
+        if self.recents_index >= self.filtered_recents.len() {
+            self.recents_index = self.filtered_recents.len().saturating_sub(1);
+        }
+        if self.recents_offset > self.recents_index {
+            self.recents_offset = self.recents_index.saturating_sub(4);
+        }
+    }
+
+    pub fn enter_recents_mode(&mut self) {
+        self.filter_recents();
+        self.mode = AppMode::Recents;
+        self.recents_index = 0;
+        self.recents_offset = 0;
+    }
+
+    pub fn handle_recents_mode(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc => {
+                self.mode = AppMode::Normal;
+                self.search_query.clear();
+                self.filtered_recents.clear();
+            }
+            KeyCode::Enter => {
+                if !self.filtered_recents.is_empty() {
+                    self.search_query = self.filtered_recents[self.recents_index].clone();
+                    self.mode = AppMode::Normal;
+                    self.start_search();
+                }
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                if self.recents_index > 0 {
+                    self.recents_index -= 1;
+                    if self.recents_index < self.recents_offset {
+                        self.recents_offset = self.recents_index;
+                    }
+                }
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                if self.recents_index < self.filtered_recents.len() - 1 {
+                    self.recents_index += 1;
+                    if self.recents_index >= self.recents_offset + 5 {
+                        self.recents_offset = self.recents_index - 4;
+                    }
+                }
+            }
+            KeyCode::Char(c) => {
+                self.search_query.push(c);
+                self.filter_recents();
+            }
+            KeyCode::Backspace => {
+                self.search_query.pop();
+                self.filter_recents();
+            }
+            _ => {}
         }
     }
 }
