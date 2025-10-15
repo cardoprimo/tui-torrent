@@ -49,8 +49,41 @@ fn loading_animation_cycles() {
     let mut app = App::new();
     app.start_search();
     let initial = app.loading_frame;
-    for _ in 0..20 { app.update_loading_animation(); }
+    for _ in 0..20 {
+        app.update_loading_animation();
+    }
     assert!(app.loading_frame < 8); // stays within frame count
     assert_ne!(initial, app.loading_frame); // progressed
     assert!(!app.search_progress.is_empty());
+}
+
+#[test]
+fn add_to_search_history() {
+    let mut app = App::new();
+    app.add_to_search_history("fedora".to_string());
+    assert!(app.search_history.contains(&"fedora".to_string()));
+    app.add_to_search_history("arch".to_string());
+    assert!(app.search_history.contains(&"arch".to_string()));
+    let len_after_two = app.search_history.len();
+    app.add_to_search_history("fedora".to_string()); // duplicate
+    assert_eq!(app.search_history.len(), len_after_two); // no duplicate added
+}
+
+#[test]
+fn filter_search_history() {
+    let mut app = App::new();
+    app.search_history = vec![
+        "ubuntu".to_string(),
+        "debian".to_string(),
+        "fedora".to_string(),
+    ];
+    app.search_query = "deb".to_string();
+    app.filter_recents();
+    assert_eq!(app.filtered_recents, vec!["debian"]);
+    app.search_query = "ora".to_string();
+    app.filter_recents();
+    assert_eq!(app.filtered_recents, vec!["fedora"]);
+    app.search_query = "".to_string();
+    app.filter_recents();
+    assert_eq!(app.filtered_recents, vec!["ubuntu", "debian", "fedora"]);
 }

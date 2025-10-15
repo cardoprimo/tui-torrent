@@ -1,9 +1,11 @@
 pub mod api;
+pub mod app;
 pub mod aria2_client;
 pub mod aria2_manager;
-pub mod app;
 pub mod ascii_art;
 pub mod error;
+pub mod storage;
 pub mod torrent_search;
 pub mod tui;
+pub mod types;
 pub mod utils;

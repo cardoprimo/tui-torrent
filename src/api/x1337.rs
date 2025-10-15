@@ -3,7 +3,6 @@ use reqwest::Client;
 use scraper::{Html, Selector};
 // No additional imports needed
 
-
 #[derive(Debug, Clone)]
 pub struct X1337Client {
     client: Client,
@@ -41,7 +40,11 @@ impl X1337Client {
         }
     }
 
-    pub async fn search(&self, query: &str, category: Option<&str>) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn search(
+        &self,
+        query: &str,
+        category: Option<&str>,
+    ) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
         // Try multiple mirrors if the main one fails
         let mirrors = vec![
             "https://1337x.to",
@@ -64,10 +67,15 @@ impl X1337Client {
         Ok(Vec::new())
     }
 
-    async fn try_search_with_mirror(&self, mirror: &str, query: &str, category: Option<&str>) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn try_search_with_mirror(
+        &self,
+        mirror: &str,
+        query: &str,
+        category: Option<&str>,
+    ) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
         // Add delay to avoid rate limiting
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-        
+
         let search_url = match category {
             Some(cat) => format!("{}/category-search/{}/{}/1/", mirror, query, cat),
             None => format!("{}/search/{}/1/", mirror, query),
@@ -75,9 +83,13 @@ impl X1337Client {
 
         // Trying to search mirror silently
 
-        let response = self.client
+        let response = self
+            .client
             .get(&search_url)
-            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+            .header(
+                "Accept",
+                "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            )
             .header("Accept-Language", "en-US,en;q=0.5")
             .header("Accept-Encoding", "gzip, deflate")
             .header("DNT", "1")
@@ -95,9 +107,10 @@ impl X1337Client {
         self.parse_search_results(&html).await
     }
 
-
-
-    async fn parse_search_results(&self, html: &str) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn parse_search_results(
+        &self,
+        html: &str,
+    ) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
         let document = Html::parse_document(html);
         let row_selector = Selector::parse("tbody tr").unwrap();
         let name_selector = Selector::parse("td.coll-1 a:nth-child(2)").unwrap();
@@ -116,10 +129,14 @@ impl X1337Client {
             ) {
                 let name = name_elem.inner_html().trim().to_string();
                 let href = name_elem.value().attr("href").unwrap_or("");
-                
+
                 // Parse seeders and leechers
                 let seeders = seeders_elem.inner_html().trim().parse::<u32>().unwrap_or(0);
-                let leechers = leechers_elem.inner_html().trim().parse::<u32>().unwrap_or(0);
+                let leechers = leechers_elem
+                    .inner_html()
+                    .trim()
+                    .parse::<u32>()
+                    .unwrap_or(0);
                 let size = size_elem.inner_html().trim().to_string();
 
                 // Get magnet link by visiting the torrent page
@@ -144,20 +161,20 @@ impl X1337Client {
         Ok(results)
     }
 
-    async fn get_magnet_link(&self, torrent_path: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_magnet_link(
+        &self,
+        torrent_path: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let torrent_url = format!("{}{}", self.base_url, torrent_path);
-        
-        let response = self.client
-            .get(&torrent_url)
-            .send()
-            .await?;
+
+        let response = self.client.get(&torrent_url).send().await?;
 
         let html = response.text().await?;
         let document = Html::parse_document(&html);
-        
+
         // Look for magnet link
         let magnet_selector = Selector::parse("a[href^='magnet:']").unwrap();
-        
+
         if let Some(magnet_elem) = document.select(&magnet_selector).next() {
             if let Some(href) = magnet_elem.value().attr("href") {
                 return Ok(href.to_string());

@@ -2,15 +2,18 @@ use crate::app::{App, AppMode};
 use crate::utils::{format_bytes, format_speed};
 use ratatui::{
     Terminal,
-    layout::{Constraint, Direction, Layout, Alignment},
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Clear},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph},
 };
 use std::io::Result;
 
 // Draw the UI using an existing terminal instance (prevents flicker & overlap)
-pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: &App) -> Result<()> {
+pub fn render_ui<B: ratatui::backend::Backend>(
+    terminal: &mut Terminal<B>,
+    app: &App,
+) -> Result<()> {
     terminal.draw(|f| {
         // Clear whole frame first so shorter new content does not leave remnants
         let size = f.size();
@@ -37,14 +40,16 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
                     Span::styled("q", Style::default().add_modifier(Modifier::BOLD).fg(Color::Red)),
                     Span::raw(" to quit"),
                 ]))
-                .block(Block::default().title("🏴‍☠️ TUI Torrent").borders(Borders::ALL));
+                .block(Block::default().title("🏴‍☠️  TUI Torrent").borders(Borders::ALL));
                 f.render_widget(instructions, chunks[0]);
             },
             AppMode::Search => {
-                let search_text = format!("Search: {}", app.search_query);
+                let mut query_with_cursor = app.search_query.clone();
+                query_with_cursor.insert(app.cursor_position, '|');
+                let search_text = format!("Search: {}", query_with_cursor);
                 let search_bar = Paragraph::new(search_text)
                     .style(Style::default().fg(Color::Yellow))
-                    .block(Block::default().title("🔍 Enter Search Query (Press Enter to search, Esc to cancel)").borders(Borders::ALL));
+                    .block(Block::default().title("🔍 Enter Search Query (Enter to search, Esc to cancel)").borders(Borders::ALL));
                 f.render_widget(search_bar, chunks[0]);
             },
             AppMode::Searching => {
@@ -94,7 +99,7 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
 
     // Render main content based on app mode
         match app.mode {
-            AppMode::Normal | AppMode::Search => {
+            AppMode::Normal => {
                 if app.active_downloads.is_empty() {
                     let empty_msg = Paragraph::new("No active downloads. Press 's' to search for torrents.")
                         .style(Style::default().fg(Color::Gray))
@@ -115,14 +120,21 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
                                     String::new()
                                 };
                                 (formatted_completed, formatted_total, progress)
-                            } else {
-                                (t.completed_length.clone(), t.total_length.clone(), String::new())
-                            };
+                             } else {
+                                 (t.completed_length.clone(), t.total_length.clone(), String::new())
+                             };
 
-                            let title = format!(
-                                "📁 {} - {}/{} {}",
-                                t.status, formatted_completed, formatted_total, progress
-                            );
+                             // Use file name if available, otherwise fall back to GID
+                             let display_name = if let Some(ref file_name) = t.file_name {
+                                 file_name.clone()
+                             } else {
+                                 format!("Download {}", t.gid.chars().take(8).collect::<String>())
+                             };
+
+                             let title = format!(
+                                 "📁 {} - {}/{} {}",
+                                 display_name, formatted_completed, formatted_total, progress
+                             );
 
                             // Add speed info if available
                             let title = if t.download_speed != "0" && !t.download_speed.is_empty() {
@@ -141,10 +153,42 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
 
                     let downloads = List::new(items).block(
                         Block::default()
-                            .title("📥 Active Downloads")
+                            .title("📥 Downloads")
                             .borders(Borders::ALL),
                     );
                     f.render_widget(downloads, chunks[1]);
+                }
+            },
+            AppMode::Search => {
+                if app.filtered_recents.is_empty() {
+                    let empty_msg = Paragraph::new("No recent searches found. Start typing to search.")
+                        .style(Style::default().fg(Color::Gray))
+                        .alignment(Alignment::Center)
+                        .block(Block::default().title("📜 Recent Searches").borders(Borders::ALL));
+                    f.render_widget(empty_msg, chunks[1]);
+                } else {
+                    let visible_items: Vec<ListItem> = app.filtered_recents
+                        .iter()
+                        .skip(app.recents_offset)
+                        .take(10)
+                        .enumerate()
+                        .map(|(i, term)| {
+                            let global_index = app.recents_offset + i;
+                            let style = if global_index == app.recents_index {
+                                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                            } else {
+                                Style::default()
+                            };
+                            ListItem::new(term.clone()).style(style)
+                        })
+                        .collect();
+
+                    let recents_list = List::new(visible_items).block(
+                        Block::default()
+                            .title("📜 Recent Searches (⇥/→ to fill from recents, ↑↓ to navigate)".to_string())
+                            .borders(Borders::ALL),
+                    );
+                    f.render_widget(recents_list, chunks[1]);
                 }
             },
             AppMode::Searching => {

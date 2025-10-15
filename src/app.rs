@@ -1,5 +1,7 @@
 use crate::aria2_client::TorrentStatus;
+use crate::storage::{HistoryStorage, SqliteStorage};
 use crate::torrent_search::TorrentSearchResult;
+use crate::utils::get_db_path;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
 use std::io;
 
@@ -11,13 +13,17 @@ pub enum AppMode {
     Searching,
 }
 
-#[derive(Debug)]
 pub struct App {
     pub mode: AppMode,
     pub search_query: String,
+    pub cursor_position: usize,
     pub search_results: Vec<TorrentSearchResult>,
     pub active_downloads: Vec<TorrentStatus>,
     pub selected_index: usize,
+    pub search_history: Vec<String>,
+    pub recents_index: usize,
+    pub recents_offset: usize,
+    pub filtered_recents: Vec<String>,
     pub should_quit: bool,
     pub search_in_progress: bool,
     pub status_message: String,
@@ -25,16 +31,32 @@ pub struct App {
     pub download_requested: bool,
     pub loading_frame: usize,
     pub search_progress: String,
+    storage: Box<dyn HistoryStorage>,
 }
 
 impl App {
     pub fn new() -> Self {
+        let storage = Box::new(SqliteStorage::new(&get_db_path()).unwrap_or_else(|e| {
+            eprintln!("Failed to initialize storage: {}", e);
+            std::process::exit(1);
+        }));
+        let search_history = storage.load_searches().unwrap_or_else(|e| {
+            eprintln!("Failed to load search history: {}", e);
+            Vec::new()
+        });
+        let filtered_recents = search_history.clone();
+
         App {
             mode: AppMode::Normal,
             search_query: String::new(),
+            cursor_position: 0,
             search_results: Vec::new(),
             active_downloads: Vec::new(),
             selected_index: 0,
+            search_history,
+            recents_index: 0,
+            recents_offset: 0,
+            filtered_recents,
             should_quit: false,
             search_in_progress: false,
             status_message: "Starting up...".to_string(),
@@ -42,6 +64,7 @@ impl App {
             download_requested: false,
             loading_frame: 0,
             search_progress: String::new(),
+            storage,
         }
     }
 
@@ -61,6 +84,10 @@ impl App {
         self.mode = AppMode::Results;
         self.status_message = format!("Found {} results", self.search_results.len());
         self.selected_index = 0;
+        // Add the search term to history
+        if !self.search_query.is_empty() {
+            self.add_to_search_history(self.search_query.clone());
+        }
     }
 
     pub fn search_error(&mut self, error: String) {
@@ -72,7 +99,7 @@ impl App {
     pub fn update_loading_animation(&mut self) {
         if self.search_in_progress {
             self.loading_frame = (self.loading_frame + 1) % 8;
-            
+
             // Update search progress message with different states
             let progress_messages = [
                 "Connecting to YTS movie database...",
@@ -84,16 +111,14 @@ impl App {
                 "Sorting results by seeders...",
                 "Finalizing search results...",
             ];
-            
+
             let message_index = (self.loading_frame / 4) % progress_messages.len();
             self.search_progress = progress_messages[message_index].to_string();
         }
     }
 
     pub fn get_loading_indicator(&self) -> &'static str {
-        const LOADING_FRAMES: &[&str] = &[
-            "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"
-        ];
+        const LOADING_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
         LOADING_FRAMES[self.loading_frame]
     }
 
@@ -114,7 +139,13 @@ impl App {
     fn handle_normal_mode(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Char('q') => self.should_quit = true,
-            KeyCode::Char('s') => self.mode = AppMode::Search,
+            KeyCode::Char('s') => {
+                self.mode = AppMode::Search;
+                self.cursor_position = self.search_query.len();
+                self.filter_recents();
+                self.recents_index = 0;
+                self.recents_offset = 0;
+            }
             KeyCode::Down | KeyCode::Char('j') => {
                 if !self.active_downloads.is_empty() {
                     self.selected_index = (self.selected_index + 1) % self.active_downloads.len();
@@ -138,6 +169,15 @@ impl App {
             KeyCode::Esc => {
                 self.mode = AppMode::Normal;
                 self.search_query.clear();
+                self.cursor_position = 0;
+                self.filtered_recents.clear();
+            }
+            KeyCode::Tab => {
+                if self.recents_index < self.filtered_recents.len() {
+                    self.search_query = self.filtered_recents[self.recents_index].clone();
+                    self.cursor_position = self.search_query.len();
+                    self.filter_recents();
+                }
             }
             KeyCode::Enter => {
                 if !self.search_query.is_empty() {
@@ -145,10 +185,47 @@ impl App {
                 }
             }
             KeyCode::Backspace => {
-                self.search_query.pop();
+                if self.cursor_position > 0 {
+                    self.search_query.remove(self.cursor_position - 1);
+                    self.cursor_position -= 1;
+                    self.filter_recents();
+                }
+            }
+            KeyCode::Up => {
+                if self.recents_index > 0 {
+                    self.recents_index -= 1;
+                    if self.recents_index < self.recents_offset {
+                        self.recents_offset = self.recents_index;
+                    }
+                }
+            }
+            KeyCode::Down => {
+                if self.recents_index < self.filtered_recents.len() - 1 {
+                    self.recents_index += 1;
+                    if self.recents_index >= self.recents_offset + 5 {
+                        self.recents_offset = self.recents_index - 4;
+                    }
+                }
+            }
+            KeyCode::Left => {
+                if self.cursor_position > 0 {
+                    self.cursor_position -= 1;
+                }
+            }
+            KeyCode::Right => {
+                if self.cursor_position < self.search_query.len() {
+                    self.cursor_position += 1;
+                } else if self.recents_index < self.filtered_recents.len() {
+                    // Fill from selected recent, like TAB
+                    self.search_query = self.filtered_recents[self.recents_index].clone();
+                    self.cursor_position = self.search_query.len();
+                    self.filter_recents();
+                }
             }
             KeyCode::Char(c) => {
-                self.search_query.push(c);
+                self.search_query.insert(self.cursor_position, c);
+                self.cursor_position += 1;
+                self.filter_recents();
             }
             _ => {}
         }
@@ -194,6 +271,35 @@ impl App {
             _ => {
                 // Ignore other keys while searching
             }
+        }
+    }
+
+    pub fn add_to_search_history(&mut self, term: String) {
+        if !self.search_history.contains(&term) {
+            self.search_history.push(term.clone());
+            if let Err(e) = self.storage.save_search(&term) {
+                eprintln!("Failed to save search term: {}", e);
+            }
+        }
+    }
+
+    pub fn filter_recents(&mut self) {
+        if self.search_query.is_empty() {
+            self.filtered_recents = self.search_history.clone();
+        } else {
+            self.filtered_recents = self
+                .search_history
+                .iter()
+                .filter(|term| term.contains(&self.search_query))
+                .cloned()
+                .collect();
+        }
+        // Reset index and offset if out of bounds
+        if self.recents_index >= self.filtered_recents.len() {
+            self.recents_index = self.filtered_recents.len().saturating_sub(1);
+        }
+        if self.recents_offset > self.recents_index {
+            self.recents_offset = self.recents_index.saturating_sub(4);
         }
     }
 }
