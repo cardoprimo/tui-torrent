@@ -8,7 +8,7 @@ pub fn get_default_download_dir() -> PathBuf {
             return home.join("Downloads");
         }
     }
-    
+
     #[cfg(target_os = "linux")]
     {
         // Try XDG user dirs first
@@ -20,14 +20,14 @@ pub fn get_default_download_dir() -> PathBuf {
             return home.join("Downloads");
         }
     }
-    
+
     #[cfg(target_os = "windows")]
     {
         if let Some(download_dir) = dirs::download_dir() {
             return download_dir;
         }
     }
-    
+
     // Ultimate fallback - current directory
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
@@ -38,6 +38,20 @@ pub fn ensure_download_dir_exists(path: &PathBuf) -> std::io::Result<()> {
         std::fs::create_dir_all(path)?;
     }
     Ok(())
+}
+
+/// Get the database file path
+pub fn get_db_path() -> PathBuf {
+    if let Some(data_dir) = dirs::data_dir() {
+        let app_dir = data_dir.join("tui-torrent");
+        if let Err(_) = std::fs::create_dir_all(&app_dir) {
+            // Fallback to current dir
+            return PathBuf::from("tui-torrent.db");
+        }
+        app_dir.join("tui-torrent.db")
+    } else {
+        PathBuf::from("tui-torrent.db")
+    }
 }
 
 /// Format bytes into human-readable format (B, KB, MB, GB, TB)

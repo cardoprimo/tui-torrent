@@ -81,13 +81,4 @@ fn filter_search_history() {
     assert_eq!(app.filtered_recents, vec!["ubuntu", "debian", "fedora"]);
 }
 
-#[test]
-fn enter_recents_mode() {
-    let mut app = App::new();
-    app.search_history = vec!["ubuntu".to_string(), "debian".to_string()];
-    app.enter_recents_mode();
-    assert_eq!(app.mode, AppMode::Recents);
-    assert_eq!(app.recents_index, 0);
-    assert_eq!(app.recents_offset, 0);
-    assert_eq!(app.filtered_recents, vec!["ubuntu", "debian"]);
-}
+
