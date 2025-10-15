@@ -2,15 +2,18 @@ use crate::app::{App, AppMode};
 use crate::utils::{format_bytes, format_speed};
 use ratatui::{
     Terminal,
-    layout::{Constraint, Direction, Layout, Alignment},
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Clear},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph},
 };
 use std::io::Result;
 
 // Draw the UI using an existing terminal instance (prevents flicker & overlap)
-pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: &App) -> Result<()> {
+pub fn render_ui<B: ratatui::backend::Backend>(
+    terminal: &mut Terminal<B>,
+    app: &App,
+) -> Result<()> {
     terminal.draw(|f| {
         // Clear whole frame first so shorter new content does not leave remnants
         let size = f.size();
@@ -148,7 +151,7 @@ pub fn render_ui<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: 
 
                     let downloads = List::new(items).block(
                         Block::default()
-                            .title("📥 Active Downloads")
+                            .title("📥 Downloads")
                             .borders(Borders::ALL),
                     );
                     f.render_widget(downloads, chunks[1]);

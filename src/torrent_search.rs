@@ -1,6 +1,6 @@
-use crate::api::{X1337Client, YtsClient, PirateBayClient};
+use crate::api::{PirateBayClient, X1337Client, YtsClient};
 use serde::{Deserialize, Serialize};
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TorrentSearchResult {
@@ -28,40 +28,63 @@ impl TorrentSearchEngine {
         }
     }
 
-    pub async fn search_torrents(&self, query: &str, category: Option<&str>) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn search_torrents(
+        &self,
+        query: &str,
+        category: Option<&str>,
+    ) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
         let mut all_results = Vec::new();
 
         // Search YTS (movies)
-        if let Ok(Ok(mut results)) = timeout(Duration::from_secs(15), self.search_yts(query)).await {
+        if let Ok(Ok(mut results)) = timeout(Duration::from_secs(15), self.search_yts(query)).await
+        {
             all_results.append(&mut results);
         }
 
         // Search PirateBay
-        if let Ok(Ok(mut results)) = timeout(Duration::from_secs(15), self.search_piratebay(query, category)).await {
+        if let Ok(Ok(mut results)) = timeout(
+            Duration::from_secs(15),
+            self.search_piratebay(query, category),
+        )
+        .await
+        {
             all_results.append(&mut results);
         }
 
         // Search 1337x
-        if let Ok(Ok(mut results)) = timeout(Duration::from_secs(15), self.search_1337x(query, category)).await {
+        if let Ok(Ok(mut results)) =
+            timeout(Duration::from_secs(15), self.search_1337x(query, category)).await
+        {
             all_results.append(&mut results);
         }
 
         // Sort by seeders (descending) and limit results
         all_results.sort_by(|a, b| b.seeders.cmp(&a.seeders));
         all_results.truncate(50);
-        
+
         Ok(all_results)
     }
 
-    async fn search_yts(&self, query: &str) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn search_yts(
+        &self,
+        query: &str,
+    ) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
         self.yts_client.search(query, Some(20)).await
     }
 
-    async fn search_piratebay(&self, query: &str, _category: Option<&str>) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn search_piratebay(
+        &self,
+        query: &str,
+        _category: Option<&str>,
+    ) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
         self.piratebay_client.search(query, None).await
     }
 
-    async fn search_1337x(&self, query: &str, category: Option<&str>) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn search_1337x(
+        &self,
+        query: &str,
+        category: Option<&str>,
+    ) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
         self.x1337_client.search(query, category).await
     }
 }
@@ -73,13 +96,17 @@ impl Default for TorrentSearchEngine {
 }
 
 // Legacy function for backward compatibility
-pub async fn search_torrents(query: &str) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+pub async fn search_torrents(
+    query: &str,
+) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
     let engine = TorrentSearchEngine::new();
     engine.search_torrents(query, None).await
 }
 
 // Function to add a torrent to aria2 via the RPC API
-pub async fn add_torrent(magnet_link: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+pub async fn add_torrent(
+    magnet_link: &str,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     let client = reqwest::Client::new();
     let payload = serde_json::json!({
         "jsonrpc": "2.0",
@@ -96,6 +123,6 @@ pub async fn add_torrent(magnet_link: &str) -> Result<String, Box<dyn std::error
 
     let json: serde_json::Value = res.json().await?;
     let gid = json["result"].as_str().unwrap_or("unknown").to_string();
-    
+
     Ok(gid)
 }

@@ -37,20 +37,21 @@ impl PirateBayClient {
             .build()
             .expect("Failed to create HTTP client");
 
-    Self { client }
+        Self { client }
     }
 
-    pub async fn search(&self, query: &str, _category: Option<&str>) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn search(
+        &self,
+        query: &str,
+        _category: Option<&str>,
+    ) -> Result<Vec<TorrentSearchResult>, Box<dyn std::error::Error + Send + Sync>> {
         // Use apibay.org API (unofficial but more reliable)
         let search_url = format!(
             "https://apibay.org/q.php?q={}&cat=0",
             urlencoding::encode(query)
         );
 
-        let response = self.client
-            .get(&search_url)
-            .send()
-            .await?;
+        let response = self.client.get(&search_url).send().await?;
 
         if !response.status().is_success() {
             return Err(format!("HTTP error: {}", response.status()).into());
@@ -63,7 +64,7 @@ impl PirateBayClient {
             // Skip if no seeders
             let seeders = pb_result.seeders.parse::<u32>().unwrap_or(0);
             let leechers = pb_result.leechers.parse::<u32>().unwrap_or(0);
-            
+
             if seeders == 0 {
                 continue;
             }

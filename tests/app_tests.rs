@@ -49,7 +49,9 @@ fn loading_animation_cycles() {
     let mut app = App::new();
     app.start_search();
     let initial = app.loading_frame;
-    for _ in 0..20 { app.update_loading_animation(); }
+    for _ in 0..20 {
+        app.update_loading_animation();
+    }
     assert!(app.loading_frame < 8); // stays within frame count
     assert_ne!(initial, app.loading_frame); // progressed
     assert!(!app.search_progress.is_empty());
@@ -69,7 +71,11 @@ fn add_to_search_history() {
 #[test]
 fn filter_search_history() {
     let mut app = App::new();
-    app.search_history = vec!["ubuntu".to_string(), "debian".to_string(), "fedora".to_string()];
+    app.search_history = vec![
+        "ubuntu".to_string(),
+        "debian".to_string(),
+        "fedora".to_string(),
+    ];
     app.search_query = "deb".to_string();
     app.filter_recents();
     assert_eq!(app.filtered_recents, vec!["debian"]);
@@ -80,5 +86,3 @@ fn filter_search_history() {
     app.filter_recents();
     assert_eq!(app.filtered_recents, vec!["ubuntu", "debian", "fedora"]);
 }
-
-

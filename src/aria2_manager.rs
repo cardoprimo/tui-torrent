@@ -1,8 +1,8 @@
-use crate::utils::{get_default_download_dir, ensure_download_dir_exists};
-use std::process::{Command, Child, Stdio};
-use std::io;
-use tokio::time::{sleep, Duration};
+use crate::utils::{ensure_download_dir_exists, get_default_download_dir};
 use reqwest::Client;
+use std::io;
+use std::process::{Child, Command, Stdio};
+use tokio::time::{Duration, sleep};
 
 pub struct Aria2Manager {
     process: Option<Child>,
@@ -25,7 +25,8 @@ impl Aria2Manager {
             "id": "test"
         });
 
-        match self.client
+        match self
+            .client
             .post("http://localhost:6800/jsonrpc")
             .json(&payload)
             .send()
@@ -48,7 +49,9 @@ impl Aria2Manager {
     }
 
     /// Start aria2c process if not already running
-    pub async fn ensure_aria2_running(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn ensure_aria2_running(
+        &mut self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if self.is_aria2_running().await {
             return Ok(());
         }
@@ -61,9 +64,9 @@ impl Aria2Manager {
         // Get and ensure download directory exists
         let download_dir = get_default_download_dir();
         ensure_download_dir_exists(&download_dir)?;
-        
+
         let download_dir_str = download_dir.to_string_lossy();
-        
+
         // Try to start aria2c with download directory
         let child = Command::new("aria2c")
             .args(&[
@@ -77,9 +80,10 @@ impl Aria2Manager {
                 "--split=16",
                 "--min-split-size=1M",
                 "--daemon=false", // Don't daemonize so we can manage the process
-                "--dir", &download_dir_str, // Set download directory
+                "--dir",
+                &download_dir_str,           // Set download directory
                 "--auto-file-renaming=true", // Avoid filename conflicts
-                "--allow-overwrite=false", // Don't overwrite existing files
+                "--allow-overwrite=false",   // Don't overwrite existing files
             ])
             .stdout(Stdio::null()) // Suppress aria2c output
             .stderr(Stdio::null())
@@ -89,7 +93,7 @@ impl Aria2Manager {
             Ok(mut process) => {
                 // Wait a moment for aria2c to start up
                 sleep(Duration::from_secs(2)).await;
-                
+
                 // Check if it's actually running
                 if self.is_aria2_running().await {
                     self.process = Some(process);
@@ -97,7 +101,10 @@ impl Aria2Manager {
                 } else {
                     // Kill the process if it's not responding
                     let _ = process.kill();
-                    Err("Failed to start aria2c RPC server - process started but not responding".into())
+                    Err(
+                        "Failed to start aria2c RPC server - process started but not responding"
+                            .into(),
+                    )
                 }
             }
             Err(e) => {
@@ -123,14 +130,15 @@ impl Aria2Manager {
             "id": "version"
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post("http://localhost:6800/jsonrpc")
             .json(&payload)
             .send()
             .await?;
 
         let json: serde_json::Value = response.json().await?;
-        
+
         if let Some(result) = json.get("result") {
             if let Some(version) = result.get("version") {
                 return Ok(version.as_str().unwrap_or("unknown").to_string());

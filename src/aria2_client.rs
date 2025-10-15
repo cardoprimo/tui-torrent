@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde_json::json;
-use tokio::time::{timeout, Duration};
 use std::sync::OnceLock;
+use tokio::time::{Duration, timeout};
 
 #[derive(Debug, Deserialize)]
 pub struct TorrentStatus {
@@ -32,9 +32,7 @@ struct Aria2StatusResponse {
 static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
 fn get_client() -> &'static reqwest::Client {
-    CLIENT.get_or_init(|| {
-        reqwest::Client::new()
-    })
+    CLIENT.get_or_init(|| reqwest::Client::new())
 }
 
 pub async fn get_active_downloads() -> Result<Vec<TorrentStatus>, reqwest::Error> {
@@ -54,11 +52,12 @@ pub async fn get_active_downloads() -> Result<Vec<TorrentStatus>, reqwest::Error
         .await?;
 
     let json: serde_json::Value = res.json().await?;
-    let basic_torrents: Vec<TorrentStatus> = serde_json::from_value(json["result"].clone()).unwrap_or(vec![]);
+    let basic_torrents: Vec<TorrentStatus> =
+        serde_json::from_value(json["result"].clone()).unwrap_or(vec![]);
 
     // Process all downloads in parallel to get file names
-    let enhanced_torrents = futures::future::join_all(
-        basic_torrents.into_iter().map(|torrent| async move {
+    let enhanced_torrents =
+        futures::future::join_all(basic_torrents.into_iter().map(|torrent| async move {
             let gid = torrent.gid.clone();
 
             // Get detailed status for this download
@@ -81,7 +80,8 @@ pub async fn get_active_downloads() -> Result<Vec<TorrentStatus>, reqwest::Error
                     Ok(response) => {
                         match response.json::<serde_json::Value>().await {
                             Ok(status_json) => {
-                                let status_response: Result<Aria2StatusResponse, _> = serde_json::from_value(status_json["result"].clone());
+                                let status_response: Result<Aria2StatusResponse, _> =
+                                    serde_json::from_value(status_json["result"].clone());
 
                                 match status_response {
                                     Ok(response) => {
@@ -101,7 +101,10 @@ pub async fn get_active_downloads() -> Result<Vec<TorrentStatus>, reqwest::Error
                                         }
                                     }
                                     Err(e) => {
-                                        eprintln!("Failed to parse aria2 status response for {}: {}", gid, e);
+                                        eprintln!(
+                                            "Failed to parse aria2 status response for {}: {}",
+                                            gid, e
+                                        );
                                         None
                                     }
                                 }
@@ -117,7 +120,9 @@ pub async fn get_active_downloads() -> Result<Vec<TorrentStatus>, reqwest::Error
                         None
                     }
                 }
-            }).await {
+            })
+            .await
+            {
                 Ok(result) => result,
                 Err(_) => {
                     eprintln!("Timeout getting status for {}", gid);
@@ -130,8 +135,8 @@ pub async fn get_active_downloads() -> Result<Vec<TorrentStatus>, reqwest::Error
                 file_name,
                 ..torrent
             }
-        })
-    ).await;
+        }))
+        .await;
 
     Ok(enhanced_torrents)
 }
