@@ -215,6 +215,11 @@ impl App {
             KeyCode::Right => {
                 if self.cursor_position < self.search_query.len() {
                     self.cursor_position += 1;
+                } else if self.recents_index < self.filtered_recents.len() {
+                    // Fill from selected recent, like TAB
+                    self.search_query = self.filtered_recents[self.recents_index].clone();
+                    self.cursor_position = self.search_query.len();
+                    self.filter_recents();
                 }
             }
             KeyCode::Char(c) => {
