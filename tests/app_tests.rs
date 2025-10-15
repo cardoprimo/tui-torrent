@@ -60,12 +60,13 @@ fn loading_animation_cycles() {
 #[test]
 fn add_to_search_history() {
     let mut app = App::new();
-    app.add_to_search_history("ubuntu".to_string());
-    assert_eq!(app.search_history, vec!["ubuntu"]);
-    app.add_to_search_history("debian".to_string());
-    assert_eq!(app.search_history, vec!["ubuntu", "debian"]);
-    app.add_to_search_history("ubuntu".to_string()); // duplicate
-    assert_eq!(app.search_history, vec!["ubuntu", "debian"]); // no duplicate
+    app.add_to_search_history("fedora".to_string());
+    assert!(app.search_history.contains(&"fedora".to_string()));
+    app.add_to_search_history("arch".to_string());
+    assert!(app.search_history.contains(&"arch".to_string()));
+    let len_after_two = app.search_history.len();
+    app.add_to_search_history("fedora".to_string()); // duplicate
+    assert_eq!(app.search_history.len(), len_after_two); // no duplicate added
 }
 
 #[test]

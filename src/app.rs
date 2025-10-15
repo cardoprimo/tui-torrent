@@ -16,6 +16,7 @@ pub enum AppMode {
 pub struct App {
     pub mode: AppMode,
     pub search_query: String,
+    pub cursor_position: usize,
     pub search_results: Vec<TorrentSearchResult>,
     pub active_downloads: Vec<TorrentStatus>,
     pub selected_index: usize,
@@ -48,6 +49,7 @@ impl App {
         App {
             mode: AppMode::Normal,
             search_query: String::new(),
+            cursor_position: 0,
             search_results: Vec::new(),
             active_downloads: Vec::new(),
             selected_index: 0,
@@ -139,6 +141,7 @@ impl App {
             KeyCode::Char('q') => self.should_quit = true,
             KeyCode::Char('s') => {
                 self.mode = AppMode::Search;
+                self.cursor_position = self.search_query.len();
                 self.filter_recents();
                 self.recents_index = 0;
                 self.recents_offset = 0;
@@ -166,20 +169,27 @@ impl App {
             KeyCode::Esc => {
                 self.mode = AppMode::Normal;
                 self.search_query.clear();
+                self.cursor_position = 0;
                 self.filtered_recents.clear();
             }
-            KeyCode::Enter => {
+            KeyCode::Tab => {
                 if self.recents_index < self.filtered_recents.len() {
-                    // Select from recents
                     self.search_query = self.filtered_recents[self.recents_index].clone();
+                    self.cursor_position = self.search_query.len();
+                    self.filter_recents();
                 }
+            }
+            KeyCode::Enter => {
                 if !self.search_query.is_empty() {
                     self.start_search();
                 }
             }
             KeyCode::Backspace => {
-                self.search_query.pop();
-                self.filter_recents();
+                if self.cursor_position > 0 {
+                    self.search_query.remove(self.cursor_position - 1);
+                    self.cursor_position -= 1;
+                    self.filter_recents();
+                }
             }
             KeyCode::Up => {
                 if self.recents_index > 0 {
@@ -197,8 +207,19 @@ impl App {
                     }
                 }
             }
+            KeyCode::Left => {
+                if self.cursor_position > 0 {
+                    self.cursor_position -= 1;
+                }
+            }
+            KeyCode::Right => {
+                if self.cursor_position < self.search_query.len() {
+                    self.cursor_position += 1;
+                }
+            }
             KeyCode::Char(c) => {
-                self.search_query.push(c);
+                self.search_query.insert(self.cursor_position, c);
+                self.cursor_position += 1;
                 self.filter_recents();
             }
             _ => {}

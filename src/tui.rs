@@ -44,10 +44,12 @@ pub fn render_ui<B: ratatui::backend::Backend>(
                 f.render_widget(instructions, chunks[0]);
             },
             AppMode::Search => {
-                let search_text = format!("Search: {}", app.search_query);
+                let mut query_with_cursor = app.search_query.clone();
+                query_with_cursor.insert(app.cursor_position, '|');
+                let search_text = format!("Search: {}", query_with_cursor);
                 let search_bar = Paragraph::new(search_text)
                     .style(Style::default().fg(Color::Yellow))
-                    .block(Block::default().title("🔍 Enter Search Query (Press Enter to search, Esc to cancel)").borders(Borders::ALL));
+                    .block(Block::default().title("🔍 Enter Search Query (Tab to fill from recents, Enter to search, Esc to cancel)").borders(Borders::ALL));
                 f.render_widget(search_bar, chunks[0]);
             },
             AppMode::Searching => {
