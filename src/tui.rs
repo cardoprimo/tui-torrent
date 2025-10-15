@@ -49,7 +49,7 @@ pub fn render_ui<B: ratatui::backend::Backend>(
                 let search_text = format!("Search: {}", query_with_cursor);
                 let search_bar = Paragraph::new(search_text)
                     .style(Style::default().fg(Color::Yellow))
-                    .block(Block::default().title("🔍 Enter Search Query (Tab/Right to fill from recents, Enter to search, Esc to cancel)").borders(Borders::ALL));
+                    .block(Block::default().title("🔍 Enter Search Query (Enter to search, Esc to cancel)").borders(Borders::ALL));
                 f.render_widget(search_bar, chunks[0]);
             },
             AppMode::Searching => {
@@ -185,7 +185,7 @@ pub fn render_ui<B: ratatui::backend::Backend>(
 
                     let recents_list = List::new(visible_items).block(
                         Block::default()
-                            .title("📜 Recent Searches (Tab/Right to fill from recents, ↑↓ to navigate)".to_string())
+                            .title("📜 Recent Searches (⇥/→ to fill from recents, ↑↓ to navigate)".to_string())
                             .borders(Borders::ALL),
                     );
                     f.render_widget(recents_list, chunks[1]);
